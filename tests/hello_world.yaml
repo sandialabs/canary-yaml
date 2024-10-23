@@ -1,0 +1,21 @@
+hello-world:
+  description: "A Hello world test"
+  keywords:
+  - fast
+  - hello world
+  script:
+  - echo "Hello, world!"
+  copy:
+  - "hello.txt"
+  link:
+  - "world.txt"
+  cases:
+  - parameters:
+      np: 2
+      a: "spam"
+  - parameters:
+      np: 4
+      a: "eggs"
+  - parameters:
+      np: 6
+      a: "ham"

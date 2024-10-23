@@ -1,0 +1,53 @@
+[project]
+name = "nvtest-yaml"
+description = "nvtest plugins to run yaml test files"
+version = "0.0"
+readme = "README.md"
+dependencies = [
+    "nvtest @ git+ssh://git@cee-gitlab.sandia.gov/ascic-test-infra/nvtest"
+]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "pytest"]
+
+[project.entry-points."nvtest.plugin"]
+generator = "nvtest_yaml.generator"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.check-wheel-contents]
+# W009: Wheel contains multiple toplevel library entries
+ignore = "W009"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 99
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint]
+ignore = ["E741", "F841", "E731"]
+select = ["F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/nvtest_yaml/__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = "mock"
+addopts = "-ra --durations=10"
+cache_dir = ".cache/pytest"
+python_files = "*.py"
+filterwarnings = ["ignore::DeprecationWarning"]

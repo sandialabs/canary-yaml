@@ -1,0 +1,4 @@
+*.pyc
+*.egg-info
+.nvtest_cache
+TestResults
