@@ -16,13 +16,14 @@ from _nvtest.util.filesystem import working_dir
 
 
 class YamlTestFile(AbstractTestGenerator):
-    def __init__(self, root: str, path: Optional[str] = None) -> None:
-        super().__init__(root, path=path)
-        self.load(open(self.file))
 
     @classmethod
     def matches(cls, path: str) -> bool:
         return path.endswith((".yml", ".yaml"))
+
+    def __init__(self, root: str, path: Optional[str] = None) -> None:
+        super().__init__(root, path=path)
+        self.load(open(self.file))
 
     def load(self, file: IO[Any]) -> None:
         """Load the file.  A file may contain more than one test spec
