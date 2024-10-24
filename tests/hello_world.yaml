@@ -1,21 +1,11 @@
-hello-world:
+hello_world:
   description: "A Hello world test"
-  keywords:
-  - fast
-  - hello world
   script:
-  - echo "Hello, world!"
-  copy:
-  - "hello.txt"
-  link:
-  - "world.txt"
-  cases:
-  - parameters:
-      np: 2
-      a: "spam"
-  - parameters:
-      np: 4
-      a: "eggs"
-  - parameters:
-      np: 6
-      a: "ham"
+  - echo "Hello, ${world}!"
+  - echo "n = ${n}"
+  keywords:
+  - "hello"
+  - "world"
+  parameters:
+    n: [2, 4, 8]
+    location: ["World", "U.S.A", "Canada", "Mexico"]

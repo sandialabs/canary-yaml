@@ -1,9 +1,10 @@
 import io
-import json
 import os
+from string import Template
 from typing import IO
 from typing import Any
 from typing import Optional
+from itertools import product
 
 import yaml
 from _nvtest.abc import AbstractTestGenerator
@@ -15,39 +16,42 @@ from _nvtest.util.filesystem import working_dir
 
 
 class YamlTestFile(AbstractTestGenerator):
-
     def __init__(self, root: str, path: Optional[str] = None) -> None:
         super().__init__(root, path=path)
-        self.load(open(self.file).read())
+        self.load(open(self.file))
 
     @classmethod
     def matches(cls, path: str) -> bool:
         return path.endswith((".yml", ".yaml"))
 
     def load(self, file: IO[Any]) -> None:
-        name, details = self.load_file(file)
-        self.name = name
-        self.script = details["script"]
-        self.cases = details.get("cases")
-        self.description = details.get("description")
-        self.keywords = details.get("keywords", [])
-        self.sources = {}
-        if "copy" in details:
-            self.sources.setdefault("copy", []).extend(details["copy"])
-        if "link" in details:
-            self.sources.setdefault("link", []).extend(details["link"])
+        """Load the file.  A file may contain more than one test spec
 
-    @staticmethod
-    def load_file(file: IO[Any]) -> tuple[str, dict]:
+        The test spec has the form:
+
+        .. code-block:: yaml
+
+           NAME:
+             description: str
+             script: list[str]
+             keywords: list[str]
+             parameters: dict[str, float | int | str | None]
+
+        The test will
+
+        """
+        self.spec: dict[str, Any] = {}
         data = yaml.safe_load(file)
         if not isinstance(data, dict):
-            raise ValueError(f"{file.name}: expected test data to be a dictionary")
+            raise ValueError(f"{file.name}: expected test spec to be a mapping")
         if len(data) != 1:
-            raise ValueError(f"{file.name}: expected one (and only one) test case")
-        # Further data validation here...
-        name = next(iter(data))
-        details = data[name]
-        return name, details
+            raise ValueError(f"{file.name}: expected one test spec")
+        self.name = next(iter(data))
+        details = data[self.name]
+        self.description = details.get("description")
+        self.keywords = details.get("keywords", [])
+        self.parameters = details.get("parameters", {})
+        self.script = details.get("script", [])
 
     def lock(
         self,
@@ -61,41 +65,23 @@ class YamlTestFile(AbstractTestGenerator):
         owners: Optional[set[str]] = None,
         env_mods: Optional[dict[str, str]] = None,
     ) -> list[TestCase]:
-
+        kwds = dict(
+            file_root=self.root,
+            file_path=self.path,
+            family=self.name,
+            script=self.script,
+            keywords=self.keywords,
+            description=self.description,
+        )
+        if not self.parameters:
+            case = YamlTestCase(**kwds)
+            return [case]
         cases: list[YamlTestCase] = []
-        dirname = os.path.dirname(self.file)
-        with working_dir(dirname):
-            sources: dict[str, list[tuple[str, str]]] = {}
-            for action, files in self.sources.items():
-                for file in files:
-                    src = os.path.abspath(file)
-                    dst = os.path.basename(src)
-                    sources.setdefault(action, []).append((src, dst))
-            if not self.cases:
-                case = YamlTestCase(
-                    file_root=self.root,
-                    file_path=self.path,
-                    family=self.name,
-                    script=self.script,
-                    sources=sources,
-                    keywords=self.keywords,
-                    description=self.description,
-                )
-                cases.append(case)
-            else:
-                for case in self.cases:
-                    parameters = case.get("parameters", {})
-                    case = YamlTestCase(
-                        file_root=self.root,
-                        file_path=self.path,
-                        parameters=parameters,
-                        family=self.name,
-                        script=self.script,
-                        sources=sources,
-                        keywords=self.keywords,
-                        description=self.description,
-                    )
-                    cases.append(case)
+        keys = list(self.parameters.keys())
+        for values in product(*self.parameters.values()):
+            parameters = dict(zip(keys, values))
+            case = YamlTestCase(parameters=parameters, **kwds)
+            cases.append(case)
         return cases  # type: ignore
 
     def describe(
@@ -130,19 +116,17 @@ class YamlTestCase(TestCase):
         *,
         file_root: str,
         file_path: str,
-        script: list[str],
-        keywords: list[str],
         family: str,
-        sources: dict[str, list[tuple[str, str]]],
-        description: str,
-        parameters: dict[str, Any],
+        script: list[str],
+        keywords: list[str] = [],
+        description: str = "",
+        parameters: dict[str, Any] = {},
         **kwds,
     ) -> None:
         super().__init__(
             file_root=file_root,
             file_path=file_path,
             family=family,
-            sources=sources,
             parameters=parameters,
         )
 
@@ -152,7 +136,10 @@ class YamlTestCase(TestCase):
         self.launcher = "bash"
         self.exe = "test_script.sh"
         self.description = description
-        self.script = script
+        self.script: list[str] = []
+        for line in script:
+            t = Template(line)
+            self.script.append(t.safe_substitute(**parameters))
 
     def setup(self, exec_root: str, copy_all_resources: bool = False) -> None:
         super().setup(exec_root, copy_all_resources=copy_all_resources)
