@@ -7,23 +7,23 @@ from typing import Optional
 from itertools import product
 
 import yaml
-from _nvtest.abc import AbstractTestGenerator
+import nvtest
 from _nvtest.resource import ResourceHandler
-from _nvtest.test.case import TestCase
 from _nvtest.util import graph
 from _nvtest.util.filesystem import set_executable
 from _nvtest.util.filesystem import working_dir
 
 
-class YamlTestFile(AbstractTestGenerator):
-
-    @classmethod
-    def matches(cls, path: str) -> bool:
-        return path.endswith((".yml", ".yaml"))
+class YAMLTestFile(nvtest.AbstractTestGenerator):
 
     def __init__(self, root: str, path: Optional[str] = None) -> None:
         super().__init__(root, path=path)
         self.load(open(self.file))
+
+    @classmethod
+    def matches(cls, path: str) -> bool:
+        """Is ``path`` a YAMLTestFile?"""
+        return path.endswith((".yml", ".yaml"))
 
     def load(self, file: IO[Any]) -> None:
         """Load the file.  A file may contain more than one test spec
@@ -36,9 +36,7 @@ class YamlTestFile(AbstractTestGenerator):
              description: str
              script: list[str]
              keywords: list[str]
-             parameters: dict[str, float | int | str | None]
-
-        The test will
+             parameters: dict[str, list[float | int | str | None]]
 
         """
         self.spec: dict[str, Any] = {}
@@ -65,7 +63,9 @@ class YamlTestFile(AbstractTestGenerator):
         timeout: Optional[float] = None,
         owners: Optional[set[str]] = None,
         env_mods: Optional[dict[str, str]] = None,
-    ) -> list[TestCase]:
+    ) -> list[nvtest.TestCase]:
+        """Take the cartesian product of parameters and from each combination create a test case.
+        """
         kwds = dict(
             file_root=self.root,
             file_path=self.path,
@@ -75,13 +75,13 @@ class YamlTestFile(AbstractTestGenerator):
             description=self.description,
         )
         if not self.parameters:
-            case = YamlTestCase(**kwds)
+            case = YAMLTestCase(**kwds)
             return [case]
-        cases: list[YamlTestCase] = []
+        cases: list[YAMLTestCase] = []
         keys = list(self.parameters.keys())
         for values in product(*self.parameters.values()):
             parameters = dict(zip(keys, values))
-            case = YamlTestCase(parameters=parameters, **kwds)
+            case = YAMLTestCase(parameters=parameters, **kwds)
             cases.append(case)
         return cases  # type: ignore
 
@@ -111,7 +111,7 @@ class YamlTestFile(AbstractTestGenerator):
         return file.getvalue()
 
 
-class YamlTestCase(TestCase):
+class YAMLTestCase(nvtest.TestCase):
     def __init__(
         self,
         *,
@@ -137,6 +137,8 @@ class YamlTestCase(TestCase):
         self.launcher = "bash"
         self.exe = "test_script.sh"
         self.description = description
+
+        # Expand variables in the script using my parameters
         self.script: list[str] = []
         for line in script:
             t = Template(line)

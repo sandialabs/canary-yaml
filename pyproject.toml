@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dev = ["ruff", "mypy", "pytest"]
 
 [project.entry-points."nvtest.plugin"]
-generator = "nvtest_yaml.generator"
+nvtest_yaml = "nvtest_yaml"
 
 [build-system]
 requires = ["setuptools>=64"]
