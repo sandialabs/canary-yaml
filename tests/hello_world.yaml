@@ -1,7 +1,7 @@
 hello_world:
   description: "A Hello world test"
   script:
-  - echo "Hello, ${world}!"
+  - echo "Hello, ${location}!"
   - echo "n = ${n}"
   keywords:
   - "hello"
