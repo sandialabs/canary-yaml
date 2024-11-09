@@ -1,3 +1,4 @@
+import fnmatch
 import io
 import os
 from string import Template
@@ -23,7 +24,7 @@ class YAMLTestFile(nvtest.AbstractTestGenerator):
     @classmethod
     def matches(cls, path: str) -> bool:
         """Is ``path`` a YAMLTestFile?"""
-        return path.endswith((".yml", ".yaml"))
+        return os.path.basename(path).startswith("test_") and path.endswith((".yml", ".yaml"))
 
     def load(self, file: IO[Any]) -> None:
         """Load the file.  A file may contain more than one test spec
