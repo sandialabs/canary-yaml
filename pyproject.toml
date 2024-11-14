@@ -18,6 +18,10 @@ nvtest_yaml = "nvtest_yaml"
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
 [tool.check-wheel-contents]
 # W009: Wheel contains multiple toplevel library entries
 ignore = "W009"
