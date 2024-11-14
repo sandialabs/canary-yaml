@@ -53,18 +53,7 @@ class YAMLTestFile(nvtest.AbstractTestGenerator):
         self.parameters = details.get("parameters", {})
         self.script = details.get("script", [])
 
-    def lock(
-        self,
-        cpus: Optional[list[int]] = None,
-        gpus: Optional[list[int]] = None,
-        nodes: Optional[list[int]] = None,
-        keyword_expr: Optional[str] = None,
-        on_options: Optional[list[str]] = None,
-        parameter_expr: Optional[str] = None,
-        timeout: Optional[float] = None,
-        owners: Optional[set[str]] = None,
-        env_mods: Optional[dict[str, str]] = None,
-    ) -> list[nvtest.TestCase]:
+    def lock(self, on_options: Optional[list[str]] = None) -> list[nvtest.TestCase]:
         """Take the cartesian product of parameters and from each combination create a test case.
         """
         kwds = dict(
@@ -86,22 +75,8 @@ class YAMLTestFile(nvtest.AbstractTestGenerator):
             cases.append(case)
         return cases  # type: ignore
 
-    def describe(
-        self,
-        keyword_expr: Optional[str] = None,
-        on_options: Optional[list[str]] = None,
-        parameter_expr: Optional[str] = None,
-        rh: Optional[ResourceHandler] = None,
-    ) -> str:
-        rh = rh or ResourceHandler()
-        cases = self.lock(
-            cpus=rh["test:cpu_count"],
-            gpus=rh["test:gpu_count"],
-            nodes=rh["test:node_count"],
-            on_options=on_options,
-            keyword_expr=keyword_expr,
-            parameter_expr=parameter_expr,
-        )
+    def describe(self, on_options: Optional[list[str]] = None) -> str:
+        cases = self.lock(on_options=on_options)
         file = io.StringIO()
         file.write(f"--- {self.name} ------------\n")
         file.write(f"File: {self.file}\n")
