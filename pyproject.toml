@@ -1,18 +1,18 @@
 [project]
-name = "nvtest-yaml"
-description = "nvtest plugins to run yaml test files"
+name = "canary-yaml"
+description = "canary plugins to run yaml test files"
 version = "0.0"
 readme = "README.md"
 dependencies = [
-    "nvtest @ git+ssh://git@cee-gitlab.sandia.gov/ascic-test-infra/nvtest"
+    "canary @ git+ssh://git@cee-gitlab.sandia.gov/ascic-test-infra/canary"
 ]
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest"]
 
-[project.entry-points."nvtest.plugin"]
-nvtest_yaml = "nvtest_yaml"
+[project.entry-points."canary.plugin"]
+canary_yaml = "canary_yaml"
 
 [build-system]
 requires = ["setuptools>=64"]
@@ -43,7 +43,7 @@ ignore = ["E741", "F841", "E731"]
 select = ["F", "I"]
 
 [tool.ruff.lint.per-file-ignores]
-"src/nvtest_yaml/__init__.py" = ["F401"]
+"src/canary_yaml/__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
