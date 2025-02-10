@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest"]
 
-[project.entry-points."canary.plugin"]
+[project.entry-points."canary"]
 canary_yaml = "canary_yaml"
 
 [build-system]

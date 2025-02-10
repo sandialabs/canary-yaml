@@ -5,6 +5,7 @@ from string import Template
 from typing import IO
 from typing import Any
 from typing import Optional
+from typing import Type
 
 import canary
 import yaml
@@ -13,14 +14,14 @@ from _canary.util.filesystem import set_executable
 from _canary.util.filesystem import working_dir
 
 
-class YAMLTestFile(canary.AbstractTestGenerator):
+class YAMLTestGenerator(canary.AbstractTestGenerator):
     def __init__(self, root: str, path: Optional[str] = None) -> None:
         super().__init__(root, path=path)
         self.load(open(self.file))
 
     @classmethod
     def matches(cls, path: str) -> bool:
-        """Is ``path`` a YAMLTestFile?"""
+        """Is ``path`` a YAMLTestGenerator?"""
         return os.path.basename(path).startswith("test_") and path.endswith((".yml", ".yaml"))
 
     def load(self, file: IO[Any]) -> None:
@@ -116,10 +117,15 @@ class YAMLTestCase(canary.TestCase):
             t = Template(line)
             self.script.append(t.safe_substitute(**parameters))
 
-    def setup(self, exec_root: str, copy_all_resources: bool = False) -> None:
-        super().setup(exec_root, copy_all_resources=copy_all_resources)
-        with working_dir(self.exec_dir):
+    def setup(self, stage: str = "run") -> None:
+        super().setup(stage=stage)
+        with working_dir(self.working_directory):
             with open(self.exe, "w") as fh:
                 fh.write("#!/usr/bin/env bash\n")
                 fh.write("\n".join(self.script))
             set_executable(self.exe)
+
+
+@canary.hookimpl
+def canary_testcase_generator() -> Type[YAMLTestCase]:
+    return YAMLTestCase
