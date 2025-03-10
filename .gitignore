@@ -1,4 +1,4 @@
 *.pyc
 *.egg-info
-.nvtest_cache
+.canary_cache
 TestResults

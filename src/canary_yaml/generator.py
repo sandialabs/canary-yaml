@@ -1,11 +1,9 @@
 import io
 import os
+import re
 from itertools import product
 from string import Template
-from typing import IO
 from typing import Any
-from typing import Optional
-from typing import Type
 
 import canary
 import yaml
@@ -15,70 +13,60 @@ from _canary.util.filesystem import working_dir
 
 
 class YAMLTestGenerator(canary.AbstractTestGenerator):
-    def __init__(self, root: str, path: Optional[str] = None) -> None:
-        super().__init__(root, path=path)
-        self.load(open(self.file))
+    """Define a YAML defined test case with the following schema:
+
+    .. code-block:: yaml
+
+       tests:
+
+         str:
+           description: str
+           script: list[str]
+           keywords: list[str]
+           parameters: dict[str, list[float | int | str | None]]
+
+    """
 
     @classmethod
     def matches(cls, path: str) -> bool:
         """Is ``path`` a YAMLTestGenerator?"""
-        return os.path.basename(path).startswith("test_") and path.endswith((".yml", ".yaml"))
+        return re.match("test_.*\.yaml", os.path.basename(path)) is not None
 
-    def load(self, file: IO[Any]) -> None:
-        """Load the file.  A file may contain more than one test spec
-
-        The test spec has the form:
-
-        .. code-block:: yaml
-
-           NAME:
-             description: str
-             script: list[str]
-             keywords: list[str]
-             parameters: dict[str, list[float | int | str | None]]
-
-        """
-        self.spec: dict[str, Any] = {}
-        data = yaml.safe_load(file)
-        if not isinstance(data, dict):
-            raise ValueError(f"{file.name}: expected test spec to be a mapping")
-        if len(data) != 1:
-            raise ValueError(f"{file.name}: expected one test spec")
-        self.name = next(iter(data))
-        details = data[self.name]
-        self.description = details.get("description")
-        self.keywords = details.get("keywords", [])
-        self.parameters = details.get("parameters", {})
-        self.script = details.get("script", [])
-
-    def lock(self, on_options: Optional[list[str]] = None) -> list[canary.TestCase]:
+    def lock(self, on_options: list[str] | None = None) -> list[canary.TestCase]:
         """Take the cartesian product of parameters and from each combination create a test case."""
-        kwds = dict(
-            file_root=self.root,
-            file_path=self.path,
-            family=self.name,
-            script=self.script,
-            keywords=self.keywords,
-            description=self.description,
-        )
-        if not self.parameters:
-            case = YAMLTestCase(**kwds)
-            return [case]
-        cases: list[YAMLTestCase] = []
-        keys = list(self.parameters.keys())
-        for values in product(*self.parameters.values()):
-            parameters = dict(zip(keys, values))
-            case = YAMLTestCase(parameters=parameters, **kwds)
-            cases.append(case)
+
+        with open(self.file, "r") as fh:
+            fd = yaml.safe_load(fh)
+
+        cases: list[canary.TestCase] = []
+        for name, details in fd["tests"].items():
+            kwds = dict(
+                file_root=self.root,
+                file_path=self.path,
+                family=name,
+                script=details["script"],
+                keywords=details.get("keywords", []),
+                description=details.get("description"),
+            )
+
+            if "parameters" not in details:
+                case = YAMLTestCase(**kwds)
+                cases.append(case)
+                continue
+
+            parameters = details.get("parameters", {})
+            keys = list(parameters.keys())
+            for values in product(*parameters.values()):
+                params = dict(zip(keys, values))
+                case = YAMLTestCase(parameters=params, **kwds)
+                cases.append(case)
         return cases  # type: ignore
 
-    def describe(self, on_options: Optional[list[str]] = None) -> str:
+    def describe(self, on_options: list[str] | None = None) -> str:
         cases = self.lock(on_options=on_options)
         file = io.StringIO()
         file.write(f"--- {self.name} ------------\n")
         file.write(f"File: {self.file}\n")
-        file.write(f"Description: {self.description}\n")
-        file.write(f"Keywords: {', '.join(self.keywords)}\n")
         file.write(f"{len(cases)} test cases:\n")
         graph.print(cases, file=file)
         return file.getvalue()
@@ -124,8 +112,3 @@ class YAMLTestCase(canary.TestCase):
                 fh.write("#!/usr/bin/env bash\n")
                 fh.write("\n".join(self.script))
             set_executable(self.exe)
-
-
-@canary.hookimpl
-def canary_testcase_generator() -> Type[YAMLTestCase]:
-    return YAMLTestCase
