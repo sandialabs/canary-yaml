@@ -105,14 +105,14 @@ class YAMLTestCase(canary.TestCase):
             t = Template(line)
             self.script.append(t.safe_substitute(**parameters))
 
-    def setup(self, stage: str = "run") -> None:
-        super().setup(stage=stage)
+    def setup(self) -> None:
+        super().setup()
         with working_dir(self.working_directory):
             with open(self.exe, "w") as fh:
                 fh.write("#!/usr/bin/env bash\n")
                 fh.write("\n".join(self.script))
             set_executable(self.exe)
--
+
 
 @canary.hookimpl
 def canary_testcase_generator():
