@@ -95,8 +95,7 @@ class YAMLTestCase(canary.TestCase):
         if keywords is not None:
             self.keywords = keywords
 
-        self.launcher = "bash"
-        self.exe = "test_script.sh"
+        self.scriptname = "test_script.sh"
         self.description = description
 
         # Expand variables in the script using my parameters
@@ -108,10 +107,13 @@ class YAMLTestCase(canary.TestCase):
     def setup(self) -> None:
         super().setup()
         with working_dir(self.working_directory):
-            with open(self.exe, "w") as fh:
+            with open(self.scriptname, "w") as fh:
                 fh.write("#!/usr/bin/env bash\n")
                 fh.write("\n".join(self.script))
-            set_executable(self.exe)
+            set_executable(self.scriptname)
+
+    def command(self) -> list[str]:
+        return ["bash", self.scriptname]
 
 
 @canary.hookimpl
