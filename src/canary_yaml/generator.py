@@ -1,15 +1,13 @@
 import io
 import os
 import re
+from pathlib import Path
 from itertools import product
 from string import Template
 from typing import Any
 
 import canary
 import yaml
-from _canary.util import graph
-from _canary.util.filesystem import set_executable
-from _canary.util.filesystem import working_dir
 
 
 class YAMLTestGenerator(canary.AbstractTestGenerator):
@@ -28,39 +26,39 @@ class YAMLTestGenerator(canary.AbstractTestGenerator):
     """
 
     @classmethod
-    def matches(cls, path: str) -> bool:
+    def matches(cls, path: str | Path) -> bool:
         """Is ``path`` a YAMLTestGenerator?"""
-        return re.match("test_.*\.yaml", os.path.basename(path)) is not None
+        path = Path(path)
+        return re.match("test_.*\.yaml", path.name) is not None
 
-    def lock(self, on_options: list[str] | None = None) -> list[canary.TestCase]:
+    def lock(self, on_options: list[str] | None = None) -> list[canary.DraftSpec]:
         """Take the cartesian product of parameters and from each combination create a test case."""
 
         with open(self.file, "r") as fh:
             fd = yaml.safe_load(fh)
 
-        cases: list[canary.TestCase] = []
+        specs: list[canary.DraftSpec] = []
         for name, details in fd["tests"].items():
             kwds = dict(
-                file_root=self.root,
-                file_path=self.path,
+                file_root=Path(self.root),
+                file_path=Path(self.path),
                 family=name,
-                script=details["script"],
                 keywords=details.get("keywords", []),
-                description=details.get("description"),
+                attributes={"details": details.get("description"), "script": details["script"]},
             )
 
             if "parameters" not in details:
-                case = YAMLTestCase(**kwds)
-                cases.append(case)
+                spec = canary.DraftSpec(**kwds)
+                specs.append(spec)
                 continue
 
             parameters = details.get("parameters", {})
             keys = list(parameters.keys())
             for values in product(*parameters.values()):
                 params = dict(zip(keys, values))
-                case = YAMLTestCase(parameters=params, **kwds)
-                cases.append(case)
-        return cases  # type: ignore
+                spec = canary.DraftSpec(parameters=params, **kwds)
+                specs.append(spec)
+        return specs
 
     def describe(self, on_options: list[str] | None = None) -> str:
         cases = self.lock(on_options=on_options)
@@ -68,54 +66,15 @@ class YAMLTestGenerator(canary.AbstractTestGenerator):
         file.write(f"--- {self.name} ------------\n")
         file.write(f"File: {self.file}\n")
         file.write(f"{len(cases)} test cases:\n")
-        graph.print(cases, file=file)
+        canary.graph.print(cases, file=file)
         return file.getvalue()
 
 
-class YAMLTestCase(canary.TestCase):
-    def __init__(
-        self,
-        *,
-        file_root: str,
-        file_path: str,
-        family: str,
-        script: list[str],
-        keywords: list[str] = [],
-        description: str = "",
-        parameters: dict[str, Any] = {},
-        **kwds,
-    ) -> None:
-        super().__init__(
-            file_root=file_root,
-            file_path=file_path,
-            family=family,
-            parameters=parameters,
-        )
-
-        if keywords is not None:
-            self.keywords = keywords
-
-        self.scriptname = "test_script.sh"
-        self.description = description
-
-        # Expand variables in the script using my parameters
-        self.script: list[str] = []
-        for line in script:
-            t = Template(line)
-            self.script.append(t.safe_substitute(**parameters))
-
-    def setup(self) -> None:
-        super().setup()
-        with working_dir(self.working_directory):
-            with open(self.scriptname, "w") as fh:
-                fh.write("#!/usr/bin/env bash\n")
-                fh.write("\n".join(self.script))
-            set_executable(self.scriptname)
-
-    def command(self) -> list[str]:
-        return ["bash", self.scriptname]
-
-
-@canary.hookimpl
-def canary_testcase_generator():
-    return YAMLTestGenerator
+def setup_yaml_test(case: canary.TestCase):
+    sh = canary.filesystem.which("sh")
+    script = case.attributes["script"]
+    with case.workspace.openfile("runtest.sh", "w") as fh:
+        fh.write(f"#!{sh}\n")
+        fh.write(f"cd {case.workspace.dir}\n")
+        fh.write("\n".join(script))
+    canary.filesystem.set_executable(case.workspace.joinpath("runtest.sh"))
