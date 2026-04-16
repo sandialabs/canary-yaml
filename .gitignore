@@ -2,3 +2,4 @@
 *.egg-info
 .canary_cache
 TestResults
+.canary
