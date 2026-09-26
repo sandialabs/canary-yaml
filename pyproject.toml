@@ -1,10 +1,10 @@
 [project]
 name = "canary-yaml"
 description = "canary plugins to run yaml test files"
-version = "0.0"
+version = "26.9.26"
 readme = "README.md"
 dependencies = [
-    "canary @ git+ssh://git@cee-gitlab.sandia.gov/ascic-test-infra/canary"
+    "canary-wm @ git+ssh://git@github.com/sandialabs/canary"
 ]
 requires-python = ">=3.10"
 
