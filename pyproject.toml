@@ -3,7 +3,7 @@ name = "canary-yaml"
 description = "canary plugins to run yaml test files"
 version = "26.9.26"
 readme = "README.md"
-dependencies = ["canary-wm @ git+https://github.com/sandialabs/canary.git@canary.app"]
+dependencies = ["canary-wm @ git+https://github.com/sandialabs/canary.git"]
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
