@@ -2,3 +2,4 @@ ruff format src
 ruff check --fix src
 mypy src
 pytest src/canary_yaml/tests
+bandit -c pyproject.toml -r src

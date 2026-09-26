@@ -80,14 +80,11 @@ jobs:
       - uses: astral-sh/ruff-action@v3
         with:
           args: "--version"
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          pip install mypy mypy-gitlab-code-quality
 
       - name: Ruff
         run: |
@@ -97,21 +94,13 @@ jobs:
       - name: MyPy type checking
         run: |
           pip install .[dev]
-          mypy ./src --no-error-summary > mypy-out.txt || true
-          mypy-gitlab-code-quality < mypy-out.txt > codequality.json
+          mypy ./src --no-error-summary
 
       - name: Upload Ruff report
         uses: actions/upload-artifact@v4
         with:
           name: ruff-report-${{ matrix.python-version }}
           path: ruff.xml
-          retention-days: 30
-
-      - name: Upload CodeQuality report
-        uses: actions/upload-artifact@v4
-        with:
-          name: codequality-report-${{ matrix.python-version }}
-          path: codequality.json
           retention-days: 30
 
   security:

@@ -3,9 +3,7 @@ name = "canary-yaml"
 description = "canary plugins to run yaml test files"
 version = "26.9.26"
 readme = "README.md"
-dependencies = [
-    "canary-wm @ git+ssh://git@github.com/sandialabs/canary"
-]
+dependencies = ["canary-wm @ git+https://github.com/sandialabs/canary.git@canary.app"]
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
@@ -55,3 +53,18 @@ addopts = "-ra --durations=10"
 cache_dir = ".cache/pytest"
 python_files = "*.py"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+
+[tool.bandit]
+skips = [
+    "B101",  # ignore asserts
+    "B311",  # ignore warnings about random numbers
+    "B318",  # xml.dom.minidom.parse to parse XML
+    "B324",  # non-cryptographic hashes allowed (they are used to generate IDs only)
+    "B404",  # consider security risks when using subprocess module
+    "B406",  # xml.sax.saxutils to parse XML
+    "B408",  # allow use of xml parsers
+    "B603",
+    "B607", # start_process_with_partial_path"
+]
+exclude_dirs = []
